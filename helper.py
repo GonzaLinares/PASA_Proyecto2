@@ -112,6 +112,14 @@ def fxnlms_sim(w0, mu, P, S, S_hat, xgen, sound, orden_filtro, N=10000):
 
     return w, J, e, d, d_hat
 
+def get_model_output(d, W):
+    h = calc_h(W)
+    
+    u = signal.lfilter(h, [1], d)
+    v = np.random.normal(0, np.sqrt(sigma2v), size=len(u))
+    
+    return u + v
+
 def fxrls_sim(w0, lamda, delta, M, P, S, S_hat, xgen, sound, orden_filtro, N=10000):
 
     """
@@ -133,6 +141,11 @@ def fxrls_sim(w0, lamda, delta, M, P, S, S_hat, xgen, sound, orden_filtro, N=100
     lamda1 = 1 / lamda
 
     for n in range(1, N):
+
+        # Modelo de señal
+        d = xgen(N + M - 1)
+        u = get_model_output(d, W)
+
         u_flipped = np.flipud(u[n:n + M]).reshape((M, 1))
         y = np.dot(w[n - 1].T, u_flipped)              # Ecuación de filtrado
         e = d[n + M - 1 - eq_delay] - y
@@ -141,8 +154,6 @@ def fxrls_sim(w0, lamda, delta, M, P, S, S_hat, xgen, sound, orden_filtro, N=100
         k = lamda1Pu / (1 + np.dot(u_flipped.T, lamda1Pu))
         w[n] = w[n - 1] + k.reshape(M) * np.conj(e);
         P = lamda1 * P - np.dot(k, lamda1Pu.T)
-        
-    J[N - 1] = J[N - 2]
 
     return w, J, e, d, d_hat
 
