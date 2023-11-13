@@ -244,6 +244,52 @@ def plot_results(results, P, S, S_hat, xgen, soundgen, compare_S_Shat=False):
     display('Señal interferencia + sonido:',
             Audio((x + sound)/max, rate=48000, normalize=False))
 
+def plot_compare(resultsLMS, resultsRLS, P, S, xgen, soundgen):
+    w_lms, J_lms, e_lms, d_lms, d_hat_lms = resultsLMS
+    w_rls, J_rls, e_rls, d_rls, d_hat_rls = resultsRLS
+    ran = [x / 48000 for x in range(len(e_rls))]
+    plt.figure(figsize=(10, 5))
+
+    plt.grid()
+    plt.title('SE vs n')
+    plt.xlabel('n')
+    plt.ylabel('Square error')
+    plt.semilogy(ran, J_lms, alpha=0.3)
+    plt.semilogy(ran, J_rls, alpha=0.3)
+
+    plt.figure(figsize=(10, 5))
+    plt.grid()
+    plt.title('Señal error vs t')
+    plt.xlabel('t [s]')
+    plt.ylabel('modulo del error [dB]')
+    plt.plot(ran, 20*np.log(np.abs(e_lms)), alpha=0.3)
+    plt.plot(ran, 20*np.log(np.abs(e_rls)), alpha=0.3)
+    plt.ylim([-100,80])
+
+    plt.figure(figsize=(10, 5))
+    plt.grid()
+    freqs, s = sp.freqz(P[0], S[0], fs=48000, worN=10000)
+    freqw_lms, wps_lms = sp.freqz(w_lms, [1], fs=48000, worN=10000)
+    freqw_rls, wps_rls = sp.freqz(w_rls, [1], fs=48000, worN=10000)
+    plt.title('Comparativa entre módulo de W(z) y P(z)/S(z)')
+    plt.semilogx(freqs, 20*np.log10(np.abs(s)), label='P(z)/S(z)')
+    plt.semilogx(freqw_lms, 20*np.log10(np.abs(wps_lms)), label='W(z)', alpha = 0.3)
+    plt.semilogx(freqw_rls, 20*np.log10(np.abs(wps_rls)), label='W(z)', alpha = 0.3)
+    plt.xlabel('f [Hz]')
+    plt.ylabel('Modulo [dB]')
+    plt.xlim([20,20000])
+    plt.legend()
+
+    n = np.arange(0, len(e_lms))
+    x = xgen(n)
+    sound = soundgen(n)
+    display('Señal error LMS:', Audio(e_lms, rate=48000, normalize=False))
+    display('Señal error RLS:', Audio(e_rls, rate=48000, normalize=False))
+    display('Señal interferencia:', Audio(
+        x, rate=48000, normalize=False))
+    display('Señal interferencia + sonido:',
+            Audio((x + sound), rate=48000, normalize=False))
+
 
 def createRoom(print):
 
