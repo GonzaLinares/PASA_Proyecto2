@@ -1,3 +1,4 @@
+from re import T
 import scipy.io as io
 import matplotlib.pyplot as plt
 import scipy.signal as sp
@@ -84,7 +85,6 @@ def fxnlms_sim(w0, mu, P, S, S_hat, xgen, sound, orden_filtro, N=10000):
     d = sp.lfilter(P[0], P[1], x)
     xf = sp.lfilter(S_hat[0], S_hat[1], x)
 
-    xf = np.concatenate([np.zeros(orden_filtro-1), xf])
     zis = np.zeros(np.max([len(S[0]), len(S[1])])-1)
     ziw = np.zeros(orden_filtro-1)
 
@@ -120,40 +120,56 @@ def get_model_output(d, W):
     
     return u + v
 
-def fxrls_sim(w0, lamda, delta, M, P, S, S_hat, xgen, sound, orden_filtro, N=10000):
+def fxrls_sim(lamda, delta, P, S, S_hat, xgen, sound, orden_filtro,  Nsamp, N=10000):
 
     """
     w0: valor inicial del filtro adaptativo
-    lamda: factor de olvido de RLS
+    lambda: factor de olvido de RLS
     delta: parámetro de regularización de RLS
     M: orden del filtro RLS
     N: iteraciones
     """
     
-    w = np.zeros((N, M))
-    J = np.zeros((N, 1))
+    w = np.zeros(orden_filtro)
+    J = np.zeros(N)
     e = np.zeros(N)
     d_hat = np.zeros(N)
     n = np.arange(0, N, 1, dtype=int)
+    Pmat = np.identity(orden_filtro) * (1/delta)
 
-    w[0] = w0
-    P = np.eye(M) / delta
-    lamda1 = 1 / lamda
+    x = xgen(n)
+    d = sp.lfilter(P[0], P[1], x)
+    xf = sp.lfilter(S_hat[0], S_hat[1], x)
 
-    for n in range(1, N):
+    zis = np.zeros(np.max([len(S[0]), len(S[1])])-1)
+    ziw = np.zeros(orden_filtro-1)
 
-        # Modelo de señal
-        d = xgen(N + M - 1)
-        u = get_model_output(d, W)
+    f = IntProgress(min=0, max=N)
+    display(f)
 
-        u_flipped = np.flipud(u[n:n + M]).reshape((M, 1))
-        y = np.dot(w[n - 1].T, u_flipped)              # Ecuación de filtrado
-        e = d[n + M - 1 - eq_delay] - y
-        J[n - 1] = e * e
-        lamda1Pu = lamda1 * np.dot(P, u_flipped)       # Ecuaciones RLS
-        k = lamda1Pu / (1 + np.dot(u_flipped.T, lamda1Pu))
-        w[n] = w[n - 1] + k.reshape(M) * np.conj(e);
-        P = lamda1 * P - np.dot(k, lamda1Pu.T)
+    i = 0
+    display(J[0], display_id='J')
+    for n in range(N):
+
+        y, ziw = sp.lfilter(w, [1], [x[n]], zi=ziw)
+
+        y = y[0] + sound(n)
+
+        d_hat_aux, zis = sp.lfilter(S[0], S[1], [y], zi=zis)
+        d_hat[n] = d_hat_aux[0]
+        e[n] = d[n] + d_hat_aux[0]
+        J[n] = e[n] * e[n]
+        if n >= orden_filtro:
+            gbar = 1/lamda * np.matmul(Pmat, np.flip(xf[n - orden_filtro + 1: n + 1]))
+            alphabar = 1 + np.dot(gbar, np.flip(xf[n - orden_filtro + 1: n + 1]))
+            g = gbar / alphabar
+            Pmat = Pmat/lamda - np.outer(g, gbar)
+            w = w - g * np.conjugate(e[n])
+            
+        if n//(N//100) > i:
+            update_display(J[n], display_id='J')
+            f.value = n
+            i += 1
 
     return w, J, e, d, d_hat
 
@@ -176,7 +192,6 @@ def plot_results(results, P, S, S_hat, xgen, soundgen, compare_S_Shat=False):
     ran = [x / 48000 for x in range(len(e))]
     plt.plot(ran, 20*np.log(np.abs(e)))
     plt.ylim([-100,80])
-    plt.xlim([0,8])
 
     plt.figure(figsize=(10, 5))
     plt.grid()
