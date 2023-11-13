@@ -164,6 +164,7 @@ def fxrls_sim(lamda, delta, P, S, S_hat, xgen, sound, orden_filtro,  Nsamp, N=10
             alphabar = 1 + np.dot(gbar, np.flip(xf[n - orden_filtro + 1: n + 1]))
             g = gbar / alphabar
             Pmat = Pmat/lamda - np.outer(g, gbar)
+            Pmat = (Pmat + Pmat.T)/2
             w = w - g * np.conjugate(e[n])
             
         if n//(N//100) > i:
@@ -176,20 +177,20 @@ def fxrls_sim(lamda, delta, P, S, S_hat, xgen, sound, orden_filtro,  Nsamp, N=10
 
 def plot_results(results, P, S, S_hat, xgen, soundgen, compare_S_Shat=False):
     w, J, e, d, d_hat = results
+    ran = [x / 48000 for x in range(len(e))]
     plt.figure(figsize=(10, 5))
 
     plt.grid()
     plt.title('SE vs n')
     plt.xlabel('n')
     plt.ylabel('Square error')
-    plt.semilogy(J)
+    plt.semilogy(ran, J)
 
     plt.figure(figsize=(10, 5))
     plt.grid()
     plt.title('Señal error vs t')
     plt.xlabel('t [s]')
     plt.ylabel('modulo del error [dB]')
-    ran = [x / 48000 for x in range(len(e))]
     plt.plot(ran, 20*np.log(np.abs(e)))
     plt.ylim([-100,80])
 
