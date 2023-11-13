@@ -84,7 +84,8 @@ def fxnlms_sim(w0, mu, P, S, S_hat, xgen, sound, orden_filtro, N=10000):
     x = xgen(n)
     d = sp.lfilter(P[0], P[1], x)
     xf = sp.lfilter(S_hat[0], S_hat[1], x)
-
+    xf = np.concatenate([np.zeros(orden_filtro-1), xf])
+    
     zis = np.zeros(np.max([len(S[0]), len(S[1])])-1)
     ziw = np.zeros(orden_filtro-1)
 
