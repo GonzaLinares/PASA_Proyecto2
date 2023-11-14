@@ -252,7 +252,7 @@ def plot_compare(resultsLMS, resultsRLS, P, S, xgen, soundgen):
 
     plt.grid()
     plt.title('SE vs n')
-    plt.xlabel('n')
+    plt.xlabel('t [s]')
     plt.ylabel('Square error')
     plt.semilogy(ran, J_lms, alpha=0.45, label='J LMS')
     plt.semilogy(ran, J_rls, alpha=0.45, label='J RLS')
